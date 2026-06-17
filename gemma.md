@@ -311,6 +311,12 @@ model Rsvp {
 
 ## 📝 9. Histórico de Alterações (Changelog)
 
+### [17/06/2026] - Correção de Inicialização e Falha de Conexão (ECONNREFUSED)
+*   **Importação Antecipada do dotenv**:
+    *   Adicionado `import 'dotenv/config'` no topo de [src/db/prisma.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/db/prisma.ts) para evitar race conditions onde as variáveis de ambiente não haviam sido carregadas no momento de inicializar o Prisma.
+*   **Compatibilidade de Variáveis do Vercel Storage**:
+    *   Ajustada a string de conexão para buscar em cadeia `DATABASE_URL`, `POSTGRES_PRISMA_URL` e `POSTGRES_URL`. Isso garante compatibilidade com as chaves de conexão automática injetadas pelo painel do Vercel Storage.
+
 ### [17/06/2026] - Correção do Script de Build para deploy no Vercel
 *   **Ajuste no package.json**:
     *   Modificado o script `build` em [package.json](file:///d:/felipe/Develop/julia/engagement-invite-api/package.json) de `"tsc"` para `"prisma generate && tsc"`.
