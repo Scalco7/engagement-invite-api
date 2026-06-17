@@ -311,6 +311,11 @@ model Rsvp {
 
 ## 📝 9. Histórico de Alterações (Changelog)
 
+### [17/06/2026] - Correção do Script de Build para deploy no Vercel
+*   **Ajuste no package.json**:
+    *   Modificado o script `build` em [package.json](file:///d:/felipe/Develop/julia/engagement-invite-api/package.json) de `"tsc"` para `"prisma generate && tsc"`.
+    *   Isso garante que, durante o deploy no Vercel (onde a pasta `generated/` ignorada no `.gitignore` está ausente), o Prisma Client seja gerado antes de iniciar a compilação do TypeScript, evitando o erro de compilação `TS2307` por falta das declarações de tipos do Prisma.
+
 ### [17/06/2026] - Refatoração de Arquitetura em Camadas e Reorganização do Prisma
 *   **Refatoração Arquitetural**:
     *   Código Express modularizado sob a estrutura de 4 camadas: **Rotas** (`src/routes/`), **Controladores** (`src/controllers/`), **Serviços** (`src/services/`) e **Utilitários** (`src/utils/`).
