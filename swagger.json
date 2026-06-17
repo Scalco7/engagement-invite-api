@@ -7,17 +7,8 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000",
-      "description": "Servidor Local"
-    },
-    {
-      "url": "https://{vercelUrl}",
-      "description": "Servidor de Produção (Vercel)",
-      "variables": {
-        "vercelUrl": {
-          "default": "engagement-invite-api.vercel.app"
-        }
-      }
+      "url": "/",
+      "description": "Servidor Dinâmico (detecta automaticamente o host local ou do Vercel)"
     }
   ],
   "paths": {

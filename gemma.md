@@ -257,6 +257,8 @@ model Guest {
 *   **Roteamento e Visualização**:
     *   Criado o arquivo descritivo [swagger.json](file:///d:/felipe/Develop/julia/engagement-invite-api/swagger.json) documentando todos os contratos de rotas.
     *   Acoplado o Swagger UI no endpoint `/api-docs` dentro do arquivo [src/app.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/app.ts), ajustando também o middleware do `helmet` para desativar a restrição de carregamento de recursos estáticos do Swagger (CSP).
+*   **Correção de CORS e Mixed Content**:
+    *   Ajustado o array `servers` em `swagger.json` para usar URL relativa (`"/"`). Isso evita falhas de "Failed to fetch" (devido a CORS ou Mixed Content de requisições HTTPS para HTTP) ao executar testes interativos diretamente da interface do Swagger na nuvem.
 
 ### [17/06/2026] - Preparação e Consolidação de Documentação
 *   **Ajuste de README e Documentação:**
