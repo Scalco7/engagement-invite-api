@@ -311,6 +311,13 @@ model Rsvp {
 
 ## 📝 9. Histórico de Alterações (Changelog)
 
+### [17/06/2026] - Reorganização e Melhorias da Documentação do Swagger
+*   **Tags de Categorização**:
+    *   Separados os endpoints da API sob duas tags principais no [swagger.json](file:///d:/felipe/Develop/julia/engagement-invite-api/swagger.json): `RSVP` (endpoints de negócios de confirmação de presença) e `System Status` (endpoints de health check e conexão).
+*   **Componentização de Schemas**:
+    *   Definidos modelos reutilizáveis em `components/schemas` para `RsvpInput` (dados de envio), `Rsvp` (modelo persistido completo) e `ErrorResponse` (padrão estruturado de erros 400 e 500).
+    *   Adicionados exemplos JSON realistas e descrições detalhadas para cada parâmetro nos schemas e payloads.
+
 ### [17/06/2026] - Correção de Inicialização e Falha de Conexão (ECONNREFUSED)
 *   **Importação Antecipada do dotenv**:
     *   Adicionado `import 'dotenv/config'` no topo de [src/db/prisma.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/db/prisma.ts) para evitar race conditions onde as variáveis de ambiente não haviam sido carregadas no momento de inicializar o Prisma.

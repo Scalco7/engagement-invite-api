@@ -3,7 +3,7 @@
   "info": {
     "title": "Engagement Invite API",
     "version": "1.0.0",
-    "description": "API em Express com TypeScript configurada para rodar no Vercel"
+    "description": "API em Express com TypeScript configurada especificamente para rodar no Vercel de forma serverless, conectada ao Neon Postgres."
   },
   "servers": [
     {
@@ -11,21 +11,46 @@
       "description": "Servidor Dinâmico (detecta automaticamente o host local ou do Vercel)"
     }
   ],
+  "tags": [
+    {
+      "name": "RSVP",
+      "description": "Gerenciamento de presença dos convidados para a festa de noivado"
+    },
+    {
+      "name": "System Status",
+      "description": "Endpoints de integridade, saúde e verificação técnica da infraestrutura"
+    }
+  ],
   "paths": {
     "/": {
       "get": {
+        "tags": ["System Status"],
         "summary": "Rota de boas-vindas da API",
+        "description": "Verifica se o servidor Express está ativo e responde adequadamente na porta correspondente, fornecendo links da documentação.",
         "responses": {
           "200": {
-            "description": "API online",
+            "description": "API online e respondendo",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "message": { "type": "string" },
-                    "status": { "type": "string" },
-                    "version": { "type": "string" }
+                    "message": {
+                      "type": "string",
+                      "example": "Welcome to the Engagement Invite API"
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "online"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "1.0.0"
+                    },
+                    "documentation": {
+                      "type": "string",
+                      "example": "/api-docs"
+                    }
                   }
                 }
               }
@@ -36,16 +61,21 @@
     },
     "/api": {
       "get": {
+        "tags": ["System Status"],
         "summary": "Status do roteador da API",
+        "description": "Informa se o roteador central Express montado no prefixo `/api` está ativo.",
         "responses": {
           "200": {
-            "description": "Resposta do roteador principal",
+            "description": "Roteador ativo",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "message": { "type": "string" }
+                    "message": {
+                      "type": "string",
+                      "example": "Hello from the Engagement Invite API Router!"
+                    }
                   }
                 }
               }
@@ -56,7 +86,9 @@
     },
     "/api/health": {
       "get": {
+        "tags": ["System Status"],
         "summary": "Health check do servidor",
+        "description": "Retorna o status geral da API Express, incluindo um timestamp e o tempo de atividade acumulado (uptime) do servidor.",
         "responses": {
           "200": {
             "description": "API saudável",
@@ -65,9 +97,19 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": { "type": "string" },
-                    "timestamp": { "type": "string", "format": "date-time" },
-                    "uptime": { "type": "number" }
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time",
+                      "example": "2026-06-17T23:37:00.000Z"
+                    },
+                    "uptime": {
+                      "type": "number",
+                      "example": 124.52
+                    }
                   }
                 }
               }
@@ -78,7 +120,9 @@
     },
     "/api/db-test": {
       "get": {
-        "summary": "Testa a conexão com o banco de dados Postgres via Neon",
+        "tags": ["System Status"],
+        "summary": "Testa a conexão com o banco de dados (Neon)",
+        "description": "Executa uma query nativa rápida (`SELECT NOW()`) utilizando o driver de WebSocket da Neon para confirmar a saúde da conexão ativa com o Postgres.",
         "responses": {
           "200": {
             "description": "Conectado ao banco de dados com sucesso",
@@ -87,13 +131,20 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": { "type": "string" },
+                    "status": {
+                      "type": "string",
+                      "example": "connected"
+                    },
                     "result": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "properties": {
-                          "db_time": { "type": "string" }
+                          "db_time": {
+                            "type": "string",
+                            "format": "date-time",
+                            "example": "2026-06-17T23:08:21.000Z"
+                          }
                         }
                       }
                     }
@@ -103,16 +154,11 @@
             }
           },
           "500": {
-            "description": "Erro de conexão com o banco",
+            "description": "Erro de conexão ou comunicação com o Postgres",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": { "type": "string" },
-                    "message": { "type": "string" },
-                    "error": { "type": "string" }
-                  }
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -122,7 +168,9 @@
     },
     "/api/rsvp": {
       "get": {
+        "tags": ["RSVP"],
         "summary": "Lista todas as confirmações de convite enviadas",
+        "description": "Retorna o histórico completo com todas as confirmações de presença registradas pelos noivos no banco Postgres.",
         "responses": {
           "200": {
             "description": "Lista de RSVPs obtida com sucesso",
@@ -131,18 +179,18 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": { "type": "string" },
-                    "count": { "type": "integer" },
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 12
+                    },
                     "data": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": { "type": "string", "format": "uuid" },
-                          "name": { "type": "string" },
-                          "phone_number": { "type": "string" },
-                          "will_go": { "type": "boolean" }
-                        }
+                        "$ref": "#/components/schemas/Rsvp"
                       }
                     }
                   }
@@ -151,16 +199,11 @@
             }
           },
           "500": {
-            "description": "Erro interno do servidor",
+            "description": "Erro interno do servidor ao ler do banco",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": { "type": "string" },
-                    "message": { "type": "string" },
-                    "error": { "type": "string" }
-                  }
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -168,30 +211,15 @@
         }
       },
       "post": {
+        "tags": ["RSVP"],
         "summary": "Salva uma confirmação ou rejeição de convite (RSVP)",
+        "description": "Recebe o formulário de resposta do convidado, higieniza o telefone aplicando a regra do prefixo nacional brasileiro `+55` e salva no banco de dados. Valida se os campos seguem regras estritas de segurança.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["name", "phone_number", "will_go"],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "minLength": 2,
-                    "maxLength": 100,
-                    "description": "Nome do convidado (mínimo 2, máximo 100 caracteres)"
-                  },
-                  "phone_number": {
-                    "type": "string",
-                    "description": "Número de telefone. Será higienizado e prefixado com +55 se necessário (mínimo 8, máximo 15 dígitos numéricos)"
-                  },
-                  "will_go": {
-                    "type": "boolean",
-                    "description": "Informa se o convidado aceita (true) ou rejeita (false) o convite"
-                  }
-                }
+                "$ref": "#/components/schemas/RsvpInput"
               }
             }
           }
@@ -204,16 +232,16 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "status": { "type": "string" },
-                    "message": { "type": "string" },
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Confirmação de convite salva com sucesso!"
+                    },
                     "data": {
-                      "type": "object",
-                      "properties": {
-                        "id": { "type": "string", "format": "uuid" },
-                        "name": { "type": "string" },
-                        "phone_number": { "type": "string" },
-                        "will_go": { "type": "boolean" }
-                      }
+                      "$ref": "#/components/schemas/Rsvp"
                     }
                   }
                 }
@@ -221,19 +249,11 @@
             }
           },
           "400": {
-            "description": "Erro de validação nos dados enviados",
+            "description": "Falha de validação de dados (parâmetros ausentes, incorretos ou fora dos limites)",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": { "type": "string" },
-                    "message": { "type": "string" },
-                    "errors": {
-                      "type": "array",
-                      "items": { "type": "string" }
-                    }
-                  }
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -243,15 +263,92 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": { "type": "string" },
-                    "message": { "type": "string" },
-                    "error": { "type": "string" }
-                  }
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RsvpInput": {
+        "type": "object",
+        "required": ["name", "phone_number", "will_go"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100,
+            "description": "Nome completo do convidado. Deve conter entre 2 e 100 caracteres.",
+            "example": "Maria Silva"
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Número de telefone do convidado. Qualquer caractere não numérico será removido. O prefixo DDI brasileiro (+55) será injetado automaticamente se estiver ausente (mínimo 8, máximo 15 dígitos numéricos após higienização).",
+            "example": "(11) 99999-9999"
+          },
+          "will_go": {
+            "type": "boolean",
+            "description": "Informa se o convidado confirma presença na festa (true) ou rejeita o convite (false).",
+            "example": true
+          }
+        }
+      },
+      "Rsvp": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador único universal (UUID) gerado automaticamente no banco de dados.",
+            "example": "d3b07384-d113-4ec5-a587-c50259b67484"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nome completo do convidado.",
+            "example": "Maria Silva"
+          },
+          "phone_number": {
+            "type": "string",
+            "description": "Telefone higienizado com DDI +55 prepended.",
+            "example": "+5511999999999"
+          },
+          "will_go": {
+            "type": "boolean",
+            "description": "Resposta de presença na festa.",
+            "example": true
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "error"
+          },
+          "message": {
+            "type": "string",
+            "example": "Falha de validação nos dados enviados."
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lista de mensagens detalhadas de validação (retornado com código HTTP 400).",
+            "example": [
+              "O campo 'name' deve ter pelo menos 2 caracteres.",
+              "O campo 'will_go' deve ser um valor booleano (true ou false)."
+            ]
+          },
+          "error": {
+            "type": "string",
+            "description": "Descrição do erro interno técnico gerado pelo banco de dados ou runtime (retornado com código HTTP 500).",
+            "example": "Connection timed out..."
           }
         }
       }
