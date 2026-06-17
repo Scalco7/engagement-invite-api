@@ -3,18 +3,16 @@
 
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model Guest {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?
-  confirmed Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Rsvp {
+  id           String  @id @default(uuid())
+  name         String
+  phone_number String
+  will_go      Boolean
 }

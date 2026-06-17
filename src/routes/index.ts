@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../db/prisma';
+import rsvpRouter from './rsvp.route';
 
 const router = Router();
 
@@ -15,7 +16,6 @@ router.get('/health', (req: Request, res: Response) => {
 // Database connectivity test using raw query
 router.get('/db-test', async (req: Request, res: Response) => {
   try {
-    // Executes a native/raw query
     const result = await prisma.$queryRaw`SELECT NOW() as db_time;`;
     res.json({
       status: 'connected',
@@ -29,6 +29,9 @@ router.get('/db-test', async (req: Request, res: Response) => {
     });
   }
 });
+
+// Mount RSVP sub-router
+router.use('/rsvp', rsvpRouter);
 
 // Default API endpoint
 router.get('/', (req: Request, res: Response) => {

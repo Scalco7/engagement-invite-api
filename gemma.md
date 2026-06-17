@@ -6,22 +6,29 @@ Esta é a documentação centralizada e completa do projeto **Engagement Invite 
 
 ## 📂 1. Estrutura do Projeto
 
-O projeto segue a estrutura recomendada para separar o fluxo local das rotas servidas como Serverless Functions no Vercel, incluindo o banco de dados via Prisma 7 e documentação pelo Swagger:
+O projeto adota uma arquitetura de camadas limpa (MVC adaptada), onde cada diretório tem uma responsabilidade estrita. A pasta de geração do client Prisma agora reside fora do código-fonte, na raiz do projeto:
 
 ```text
+├── generated/            # Prisma Client gerado automaticamente (Fora do src)
 ├── api/
 │   └── index.ts          # Ponto de entrada do Vercel (Serverless Function)
 ├── prisma/
 │   └── schema.prisma     # Modelos e definições do banco de dados (Prisma)
 ├── prisma.config.ts      # Configurações do Prisma 7 (CLI e Migrations)
 ├── src/
-│   ├── app.ts            # Definição, middlewares e rotas (Express)
+│   ├── app.ts            # Definição e middlewares do Express
 │   ├── local.ts          # Ponto de entrada local (executa em porta local)
+│   ├── controllers/      # Camada HTTP: valida requests e formata responses
+│   │   └── rsvp.controller.ts
 │   ├── db/
 │   │   └── prisma.ts     # Singleton do Prisma Client configurado com Neon
-│   ├── generated/        # Código compilado e gerado automaticamente pelo Prisma
-│   └── routes/           # Rotas da aplicação
-│       └── index.ts      # Definição de rotas principais e de teste do DB
+│   ├── routes/           # Camada de Roteamento: mapeia rotas a controllers
+│   │   ├── index.ts      # Roteador central (health check e sub-rotas)
+│   │   └── rsvp.route.ts # Roteador específico de RSVP
+│   ├── services/         # Camada de Negócio: manipula DB e lógica
+│   │   └── rsvp.service.ts
+│   └── utils/            # Utilitários compartilhados reutilizáveis
+│       └── phone.ts      # Higienização e prefixação de telefone (+55)
 ├── swagger.json          # Especificação OpenAPI 3.0 do projeto
 ├── package.json          # Gerenciamento de scripts e dependências do Node.js
 ├── tsconfig.json         # Configurações do compilador TypeScript
@@ -53,9 +60,16 @@ A partir da versão 7 do Prisma, o arquivo `schema.prisma` foi simplificado e n�
 ### 📝 2.4 Documentação Interativa com Swagger UI
 Para facilitar o entendimento e teste dos endpoints da API, o **Swagger UI** foi integrado à aplicação:
 * **Especificação OpenAPI 3.0 (`swagger.json`)**: Contém a descrição formal de todas as rotas, formatos de dados, parâmetros e respostas.
-* **Resolução de Módulos JSON**: O compilador TypeScript foi configurado com `resolveJsonModule: true` para importar o arquivo `swagger.json` diretamente de forma segura em TypeScript (`import swaggerDocument from '../swagger.json'`).
-* **Segurança do Helmet**: O middleware `helmet` altera os cabeçalhos de segurança (CSP) por padrão, o que bloqueia o carregamento de arquivos CSS e JS inline do Swagger UI. Para resolver isso, configuramos `contentSecurityPolicy: false` no Helmet.
-* **Empacotamento Vercel (`vercel.json`)**: Como a Vercel compila e empacota as Serverless Functions de forma isolada, incluímos as diretrizes de empacotamento (`functions`) para garantir que os arquivos estáticos de estilização contidos no diretório `node_modules/swagger-ui-dist/**` sejam copiados para o bundle final na nuvem, evitando páginas do Swagger sem estilo (CSS corrompido) após o deploy.
+* **Resolução de Módulos JSON**: O compilador TypeScript foi configurado com `resolveJsonModule: true` para importar o arquivo `swagger.json` diretamente de forma segura em TypeScript.
+* **Segurança do Helmet**: Configurado `contentSecurityPolicy: false` no Helmet para permitir que o CSS e os scripts inline do Swagger UI sejam renderizados sem bloqueio.
+* **Empacotamento Vercel (`vercel.json`)**: Inclui a regra de empacotamento (`functions`) garantindo que as folhas de estilo estáticas do `swagger-ui-dist` sejam copiadas no bundle de produção.
+
+### 🗂️ 2.5 Arquitetura de Camadas (Layers)
+Buscando a separação clara de responsabilidade e melhoria da legibilidade do código, a API foi dividida em 4 camadas estruturais dentro da pasta `src/`:
+1.  **Rotas (`routes/`)**: Apenas recebem as chamadas HTTP e as redirecionam para seus respectivos controladores.
+2.  **Controladores (`controllers/`)**: São responsáveis por receber os dados do HTTP, realizar a validação de segurança e regras gramaticais estritas, chamar a camada de serviço correspondente e estruturar a resposta JSON final (cabeçalhos, mensagens de erro e códigos de status).
+3.  **Serviços (`services/`)**: Responsáveis únicos pela lógica de negócio e queries persistentes com o banco de dados (Prisma). Eles não conhecem objetos do Express (como `req` ou `res`).
+4.  **Utilitários (`utils/`)**: Funções auxiliares agnósticas reutilizadas entre as demais camadas (ex: higienização e formatação de números).
 
 ---
 
@@ -68,30 +82,38 @@ Abaixo está o detalhamento de cada arquivo do projeto e sua finalidade:
 *   **[`package.json`](file:///d:/felipe/Develop/julia/engagement-invite-api/package.json)**
     *   **Função:** Configura metadados do projeto, dependências de produção (`express`, `cors`, `dotenv`, `helmet`, `swagger-ui-express`, `@prisma/client`, `@prisma/adapter-neon`, `@neondatabase/serverless`, `ws`), dependências de desenvolvimento (`typescript`, `tsx`, `prisma`, `@types/...`) e os scripts de execução (`dev`, `build`, `start`).
 *   **[`tsconfig.json`](file:///d:/felipe/Develop/julia/engagement-invite-api/tsconfig.json)**
-    *   **Função:** Configura as opções do compilador TypeScript. Inclui `"resolveJsonModule": true` para permitir o import do arquivo `swagger.json` diretamente no código-fonte.
+    *   **Função:** Configura as opções do compilador TypeScript. Inclui `"resolveJsonModule": true` para permitir o import do arquivo `swagger.json` diretamente no código-fonte. Inclui o caminho `"generated/**/*"` na lista de inclusão do scanner de compilação.
 *   **[`vercel.json`](file:///d:/felipe/Develop/julia/engagement-invite-api/vercel.json)**
     *   **Função:** Configuração do Vercel. Inclui o bloco `functions` direcionando o empacotador a adicionar a pasta `node_modules/swagger-ui-dist/**` ao arquivo compilado do `api/index.ts`.
 *   **[`prisma.config.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/prisma.config.ts)**
     *   **Função:** Arquivo do Prisma 7 que expõe as configurações do datasource e do caminho do schema utilizando variáveis de ambiente.
 *   **[`prisma/schema.prisma`](file:///d:/felipe/Develop/julia/engagement-invite-api/prisma/schema.prisma)**
-    *   **Função:** Define a infraestrutura e modelos do banco Postgres, definindo a pasta de destino do client em `src/generated/prisma`.
+    *   **Função:** Define a infraestrutura e modelos do banco Postgres, definindo a pasta de destino do client na raiz como `../generated/prisma`.
 *   **[`swagger.json`](file:///d:/felipe/Develop/julia/engagement-invite-api/swagger.json)**
     *   **Função:** Arquivo JSON padronizado com as regras do OpenAPI 3.0 descrevendo os endpoints da API para o Swagger UI renderizar.
 *   **[`.gitignore`](file:///d:/felipe/Develop/julia/engagement-invite-api/.gitignore)**
-    *   **Função:** Lista arquivos locais a serem ignorados pelo controle de versão do Git.
+    *   **Função:** Lista arquivos locais a serem ignorados pelo controle de versão do Git (incluindo o client gerado pelo Prisma na pasta `generated/` no diretório raiz).
 
 ### 📦 3.2 Código Fonte e Pontos de Entrada
 
 *   **[`api/index.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/api/index.ts)**
     *   **Função:** Entrada serverless padrão da Vercel. Exporta por padrão o Express configurado em `src/app`.
 *   **[`src/app.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/app.ts)**
-    *   **Função:** Inicializa o Express, adiciona os middlewares necessários (incluindo desativação do CSP no Helmet para o Swagger) e monta as rotas da API em `/api` e o Swagger UI na rota `/api-docs`.
+    *   **Função:** Inicializa o Express, adiciona os middlewares necessários e monta as rotas da API em `/api` e o Swagger UI na rota `/api-docs`.
 *   **[`src/local.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/local.ts)**
     *   **Função:** Entrada local executando a API em porta clássica (default `3000`).
 *   **[`src/db/prisma.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/db/prisma.ts)**
-    *   **Função:** Inicializador de conexão singleton do Prisma utilizando drivers otimizados de WebSocket Neon.
+    *   **Função:** Inicializador de conexão singleton do Prisma utilizando drivers otimizados de WebSocket Neon, com importação vinda de `../../generated/prisma/client`.
+*   **[`src/utils/phone.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/utils/phone.ts)**
+    *   **Função:** Contém o helper `sanitizeAndFormatPhone` para limpar e prefixar com `+55` qualquer número telefônico brasileiro enviado.
+*   **[`src/services/rsvp.service.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/services/rsvp.service.ts)**
+    *   **Função:** Responsável pelas operações SQL no banco via Prisma (`createRsvp` e `getAllRsvps`).
+*   **[`src/controllers/rsvp.controller.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/controllers/rsvp.controller.ts)**
+    *   **Função:** Valida campos recebidos na requisição POST de RSVP, aplica a sanitização de telefone, orquestra a chamada de banco por meio da Service e trata as respostas e exceções HTTP.
+*   **[`src/routes/rsvp.route.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/routes/rsvp.route.ts)**
+    *   **Função:** Conecta os verbos HTTP `GET` e `POST` aos respectivos handlers `RsvpController.list` e `RsvpController.create`.
 *   **[`src/routes/index.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/routes/index.ts)**
-    *   **Função:** Declara endpoints expostos, gerenciando lógica de requisição e resposta.
+    *   **Função:** Agrupa os roteadores. Monta as rotas de infraestrutura (`/health` e `/db-test`) e delega as rotas de negócios `/rsvp` ao `rsvp.route.ts`.
 
 ---
 
@@ -160,15 +182,13 @@ O console exibirá:
 
 ## 📊 7. Modelagem e Comandos do Prisma 7
 
-### 7.1 Modelo Inicial (`Guest`)
+### 7.1 Modelo de RSVP (`Rsvp`)
 ```prisma
-model Guest {
-  id        String   @id @default(uuid())
-  name      String
-  email     String?
-  confirmed Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Rsvp {
+  id           String  @id @default(uuid())
+  name         String
+  phone_number String
+  will_go      Boolean
 }
 ```
 
@@ -224,23 +244,66 @@ model Guest {
 ### 8.5 GET `/api/db-test`
 *   **Descrição:** Testa a conexão com o Postgres executando query nativa `SELECT NOW()`.
 *   **Método:** `GET`
-*   **Response de Sucesso (JSON):**
+*   **Response (JSON):**
     ```json
     {
       "status": "connected",
-      "result": [
+      "result": [ { "db_time": "2026-06-17T23:05:12.456Z" } ]
+    }
+    ```
+
+### 8.6 GET `/api/rsvp`
+*   **Descrição:** Retorna a lista de todas as confirmações de presença (RSVPs) cadastradas no banco de dados.
+*   **Método:** `GET`
+*   **Response de Sucesso (JSON - 200):**
+    ```json
+    {
+      "status": "success",
+      "count": 1,
+      "data": [
         {
-          "db_time": "2026-06-17T23:05:12.456Z"
+          "id": "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6",
+          "name": "Maria Silva",
+          "phone_number": "+5511999999999",
+          "will_go": true
         }
       ]
     }
     ```
-*   **Response de Erro (JSON):**
+
+### 8.7 POST `/api/rsvp`
+*   **Descrição:** Valida e salva uma nova resposta de convite (aceito/rejeitado) no banco.
+*   **Método:** `POST`
+*   **Request Body (JSON):**
+    ```json
+    {
+      "name": "Maria Silva",
+      "phone_number": "11 99999-9999",
+      "will_go": true
+    }
+    ```
+*   **Response de Sucesso (JSON - 201):**
+    ```json
+    {
+      "status": "success",
+      "message": "Confirmação de convite salva com sucesso!",
+      "data": {
+        "id": "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6",
+        "name": "Maria Silva",
+        "phone_number": "+5511999999999",
+        "will_go": true
+      }
+    }
+    ```
+*   **Response de Erro de Validação (JSON - 400):**
     ```json
     {
       "status": "error",
-      "message": "Failed to connect to the database",
-      "error": "Descrição detalhada do erro gerado pelo banco"
+      "message": "Falha de validação nos dados enviados.",
+      "errors": [
+        "O campo 'name' deve ter pelo menos 2 caracteres.",
+        "O número de telefone fornecido em 'phone_number' é muito curto..."
+      ]
     }
     ```
 
@@ -248,28 +311,52 @@ model Guest {
 
 ## 📝 9. Histórico de Alterações (Changelog)
 
+### [17/06/2026] - Refatoração de Arquitetura em Camadas e Reorganização do Prisma
+*   **Refatoração Arquitetural**:
+    *   Código Express modularizado sob a estrutura de 4 camadas: **Rotas** (`src/routes/`), **Controladores** (`src/controllers/`), **Serviços** (`src/services/`) e **Utilitários** (`src/utils/`).
+    *   Criado o utilitário [src/utils/phone.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/utils/phone.ts) contendo a função de sanitização de telefone.
+    *   Criada a Service [src/services/rsvp.service.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/services/rsvp.service.ts) encapsulando chamadas ao banco com Prisma.
+    *   Criado o Controller [src/controllers/rsvp.controller.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/controllers/rsvp.controller.ts) gerenciando validações e respostas HTTP.
+    *   Criado o roteador modular [src/routes/rsvp.route.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/routes/rsvp.route.ts) integrado ao roteador central.
+*   **Relocalização do Prisma Client**:
+    *   Modificado o caminho de compilação em [prisma/schema.prisma](file:///d:/felipe/Develop/julia/engagement-invite-api/prisma/schema.prisma) de `../src/generated/prisma` para a raiz `../generated/prisma`.
+    *   Atualizado o arquivo [tsconfig.json](file:///d:/felipe/Develop/julia/engagement-invite-api/tsconfig.json) para incluir `"generated/**/*"` na compilação do TypeScript.
+    *   Ajustado o path de importação no singleton [src/db/prisma.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/db/prisma.ts) para `../../generated/prisma/client`.
+    *   Deletada a pasta antiga obsoleta `src/generated`.
+
+### [17/06/2026] - Criação da Tabela de RSVP, Validações e Regra de Telefone (+55)
+*   **Banco de Dados (Prisma)**:
+    *   Modificado o schema substituindo `Guest` por `Rsvp`.
+    *   Regerado o Prisma Client via `npx prisma generate`.
+*   **Implementação das Rotas e Regras de Negócio**:
+    *   Criada lógica de higienização de telefones e prefixo `+55` em [src/routes/index.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/routes/index.ts).
+    *   Implementadas validações com códigos HTTP 400.
+    *   Criadas as rotas `POST /api/rsvp` e `GET /api/rsvp` no banco de dados com Prisma.
+*   **Documentação e Swagger**:
+    *   Atualizado o arquivo [swagger.json](file:///d:/felipe/Develop/julia/engagement-invite-api/swagger.json).
+
 ### [17/06/2026] - Integração do Swagger UI para Documentação da API
 *   **Instalação de Dependências**:
     *   Instalada a biblioteca `swagger-ui-express` e sua tipagem `@types/swagger-ui-express`.
 *   **Configuração de TypeScript e Assets**:
-    *   Modificado o arquivo [tsconfig.json](file:///d:/felipe/Develop/julia/engagement-invite-api/tsconfig.json) ativando `"resolveJsonModule": true` para suportar importação direta de arquivos JSON.
-    *   Modificado o arquivo [vercel.json](file:///d:/felipe/Develop/julia/engagement-invite-api/vercel.json) adicionando regras de compilação/empacotamento de funções para incluir a biblioteca estática `swagger-ui-dist` nas Serverless Functions do Vercel.
+    *   Modificado [tsconfig.json](file:///d:/felipe/Develop/julia/engagement-invite-api/tsconfig.json) ativando `"resolveJsonModule": true`.
+    *   Modificado [vercel.json](file:///d:/felipe/Develop/julia/engagement-invite-api/vercel.json) para incluir `swagger-ui-dist` nas Serverless Functions do Vercel.
 *   **Roteamento e Visualização**:
-    *   Criado o arquivo descritivo [swagger.json](file:///d:/felipe/Develop/julia/engagement-invite-api/swagger.json) documentando todos os contratos de rotas.
-    *   Acoplado o Swagger UI no endpoint `/api-docs` dentro do arquivo [src/app.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/app.ts), ajustando também o middleware do `helmet` para desativar a restrição de carregamento de recursos estáticos do Swagger (CSP).
+    *   Criado o arquivo descritivo [swagger.json](file:///d:/felipe/Develop/julia/engagement-invite-api/swagger.json).
+    *   Acoplado o Swagger UI no endpoint `/api-docs` dentro do arquivo [src/app.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/app.ts) desativando CSP no Helmet.
 *   **Correção de CORS e Mixed Content**:
-    *   Ajustado o array `servers` em `swagger.json` para usar URL relativa (`"/"`). Isso evita falhas de "Failed to fetch" (devido a CORS ou Mixed Content de requisições HTTPS para HTTP) ao executar testes interativos diretamente da interface do Swagger na nuvem.
+    *   Ajustado o array `servers` em `swagger.json` para usar URL relativa (`"/"`).
 
 ### [17/06/2026] - Preparação e Consolidação de Documentação
 *   **Ajuste de README e Documentação:**
-    *   Criado o arquivo [README.md](file:///d:/felipe/Develop/julia/engagement-invite-api/README.md) contendo instruções sucintas de Quick Start.
-    *   Centralizado e enriquecido o arquivo [gemma.md](file:///d:/felipe/Develop/julia/engagement-invite-api/gemma.md) com todas as definições técnicas detalhadas passo a passo.
+    *   Criado o arquivo [README.md](file:///d:/felipe/Develop/julia/engagement-invite-api/README.md).
+    *   Centralizado e enriquecido o arquivo [gemma.md](file:///d:/felipe/Develop/julia/engagement-invite-api/gemma.md).
 
 ### [17/06/2026] - Integração do Vercel Storage (Neon Postgres) com Prisma 7
 *   **Instalação de Dependências:**
-    *   Prisma CLI (`prisma`), Prisma Client (`@prisma/client`), `@prisma/adapter-neon`, `@neondatabase/serverless`, `ws` e `@types/ws`.
+    *   Prisma CLI, Prisma Client, `@prisma/adapter-neon`, `@neondatabase/serverless`, `ws` e `@types/ws`.
 *   **Estrutura de Banco:**
-    *   Criado o arquivo [prisma.config.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/prisma.config.ts) e configurado o [prisma/schema.prisma](file:///d:/felipe/Develop/julia/engagement-invite-api/prisma/schema.prisma).
+    *   Criado `prisma.config.ts` e configurado `schema.prisma`.
     *   Criação de singleton de conexão em [src/db/prisma.ts](file:///d:/felipe/Develop/julia/engagement-invite-api/src/db/prisma.ts) e rota de testes `/api/db-test`.
 
 ### [17/06/2026] - Inicialização do Projeto
