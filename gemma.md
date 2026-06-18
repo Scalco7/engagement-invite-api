@@ -177,7 +177,8 @@ erDiagram
     Rsvp {
         String id PK
         String name
-        String phone_number
+        String email UK
+        String phone_number UK
         Boolean will_go
     }
     BetQuestion {
@@ -198,7 +199,7 @@ erDiagram
 ```
 
 ### 7.1 Definição dos Modelos no Schema
-*   **`Rsvp` (Convidados)**: Controla a resposta padrão de presença na festa de noivado.
+*   **`Rsvp` (Convidados)**: Controla a resposta padrão de presença na festa de noivado. Possui campos únicos de `email` e `phone_number` para evitar duplicidades e permitir a recuperação do RSVP.
 *   **`BetQuestion` (Perguntas)**: Cadastra as perguntas que farão parte do bolão dinâmico. O campo `type` pode ser `TEXT`, `NUMBER` ou `GUEST_SELECT`.
 *   **`GuestBet` (Apostas/Votos)**: Registra o palpite individual de cada convidado. Possui chave única composta `@@unique([rsvpId, questionId])` para evitar votos duplicados.
 
@@ -213,7 +214,9 @@ Abaixo estão listadas as rotas montadas sob o prefixo `/api` agrupadas por suas
 *   **`GET /api/rsvp`**
     *   **Descrição:** Retorna a lista de todas as presenças respondidas.
 *   **`POST /api/rsvp`**
-    *   **Descrição:** Valida dados (nome entre 2 e 100 caracteres, telefone entre 8 e 15 dígitos numéricos), higieniza o telefone aplicando prefixo `+55` (padrão Brasil) e persiste o RSVP.
+    *   **Descrição:** Valida dados (nome, e-mail e telefone), higieniza o telefone aplicando o prefixo `+55` (padrão Brasil) e persiste o RSVP. Garante e-mail e telefone únicos.
+*   **`POST /api/rsvp/lookup`**
+    *   **Descrição:** Busca o RSVP correspondente ao e-mail e telefone fornecidos. O telefone é sanitizado e formatado antes da busca. Retorna o RSVP completo (incluindo o ID) caso exista.
 
 ### 8.2 Categoria: Bolão (Bets)
 
@@ -235,6 +238,16 @@ Abaixo estão listadas as rotas montadas sob o prefixo `/api` agrupadas por suas
 ---
 
 ## 📝 9. Histórico de Alterações (Changelog)
+
+### [18/06/2026] - Adição de E-mail, Unicidade e Rota de Lookup
+*   **Banco de Dados (Prisma)**:
+    *   Adicionado o campo `email` no modelo `Rsvp` com restrição de chave única (`@unique`).
+    *   Adicionada restrição de chave única (`@unique`) ao campo `phone_number` no modelo `Rsvp`.
+*   **HTTP, Rotas e Serviços**:
+    *   Criada a rota `POST /api/rsvp/lookup` para recuperar um RSVP informando e-mail e telefone.
+    *   Atualizados os métodos de criação e validação de RSVP para exigir e-mail válido e gerenciar conflito de chaves únicas (retorno 400 em vez de 500).
+*   **Documentação**:
+    *   Atualizada a especificação do `swagger.json` e diagramas em `gemma.md`.
 
 ### [18/06/2026] - Criação do Bolão e Cálculo de Odds Dinâmicas
 *   **Banco de Dados (Prisma)**:

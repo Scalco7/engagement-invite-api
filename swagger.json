@@ -275,6 +275,88 @@
         }
       }
     },
+    "/api/rsvp/lookup": {
+      "post": {
+        "tags": ["RSVP"],
+        "summary": "Recupera o RSVP de um convidado por e-mail e telefone",
+        "description": "Busca os dados de confirmação de convite do convidado associado ao e-mail e telefone informados. O telefone é sanitizado e formatado com DDI +55 antes da busca.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "phone_number"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "E-mail do convidado.",
+                    "example": "maria.silva@example.com"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "description": "Telefone do convidado.",
+                    "example": "(11) 99999-9999"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dados do RSVP retornados com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Rsvp"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Falha na validação dos campos de busca",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhum RSVP correspondente encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/bets/questions": {
       "get": {
         "tags": ["Bolão"],
@@ -447,7 +529,7 @@
     "schemas": {
       "RsvpInput": {
         "type": "object",
-        "required": ["name", "phone_number", "will_go"],
+        "required": ["name", "email", "phone_number", "will_go"],
         "properties": {
           "name": {
             "type": "string",
@@ -455,6 +537,12 @@
             "maxLength": 100,
             "description": "Nome completo do convidado. Deve conter entre 2 e 100 caracteres.",
             "example": "Maria Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "E-mail único do convidado.",
+            "example": "maria.silva@example.com"
           },
           "phone_number": {
             "type": "string",
@@ -481,6 +569,12 @@
             "type": "string",
             "description": "Nome completo do convidado.",
             "example": "Maria Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "E-mail do convidado.",
+            "example": "maria.silva@example.com"
           },
           "phone_number": {
             "type": "string",

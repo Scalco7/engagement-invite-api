@@ -13,7 +13,8 @@ datasource db {
 model Rsvp {
   id           String     @id @default(uuid())
   name         String
-  phone_number String
+  email        String     @unique
+  phone_number String     @unique
   will_go      Boolean
   bets         GuestBet[]
 }
