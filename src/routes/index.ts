@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../db/prisma';
 import rsvpRouter from './rsvp.route';
+import betRouter from './bet.route';
 
 const router = Router();
 
@@ -32,6 +33,9 @@ router.get('/db-test', async (req: Request, res: Response) => {
 
 // Mount RSVP sub-router
 router.use('/rsvp', rsvpRouter);
+
+// Mount Bets sub-router
+router.use('/bets', betRouter);
 
 // Default API endpoint
 router.get('/', (req: Request, res: Response) => {

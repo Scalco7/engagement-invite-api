@@ -17,6 +17,10 @@
       "description": "Gerenciamento de presença dos convidados para a festa de noivado"
     },
     {
+      "name": "Bolão",
+      "description": "Gerenciamento de palpites (bets) e cálculo dinâmico de odds para a festa de noivado"
+    },
+    {
       "name": "System Status",
       "description": "Endpoints de integridade, saúde e verificação técnica da infraestrutura"
     }
@@ -66,7 +70,7 @@
         "description": "Informa se o roteador central Express montado no prefixo `/api` está ativo.",
         "responses": {
           "200": {
-            "description": "Roteador ativo",
+            "description": "Roteador active",
             "content": {
               "application/json": {
                 "schema": {
@@ -270,6 +274,173 @@
           }
         }
       }
+    },
+    "/api/bets/questions": {
+      "get": {
+        "tags": ["Bolão"],
+        "summary": "Lista todas as perguntas do bolão com as odds calculadas",
+        "description": "Recupera todas as perguntas cadastradas para o bolão e calcula em tempo real as odds de cada opção com base nos palpites atuais dos convidados (modelo de mercado totalizador).",
+        "responses": {
+          "200": {
+            "description": "Lista de perguntas com cotações obtida com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 5
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/QuestionWithOdds"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor ao consultar o banco",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Bolão"],
+        "summary": "Cadastra uma nova pergunta no bolão",
+        "description": "Cria uma nova pergunta para o bolão de palpites. Suporta perguntas de digitação livre (TEXT), numérica (NUMBER) ou seleção dinâmica de convidados confirmados (GUEST_SELECT).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BetQuestionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pergunta criada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Pergunta do bolão criada com sucesso!"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/BetQuestion"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados da requisição inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor ao criar no banco",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bets/place": {
+      "post": {
+        "tags": ["Bolão"],
+        "summary": "Registra o palpite (aposta) de um convidado",
+        "description": "Registra a aposta de um convidado em uma determinada pergunta do bolão. Valida se o convidado confirmou presença, se a pergunta existe, se o formato da resposta está adequado e se o convidado já realizou um palpite para a pergunta específica.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceBetInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Aposta registrada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Palpite registrado com sucesso!"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GuestBet"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro de validação ou regra de negócio violada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor ao persistir a aposta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -287,7 +458,7 @@
           },
           "phone_number": {
             "type": "string",
-            "description": "Número de telefone do convidado. Qualquer caractere não numérico será removido. O prefixo DDI brasileiro (+55) será injetado automaticamente se estiver ausente (mínimo 8, máximo 15 dígitos numéricos após higienização).",
+            "description": "Número de telefone do convidado. Qualquer caractere não numérico será removido. O DDI brasileiro (+55) será injetado automaticamente se estiver ausente.",
             "example": "(11) 99999-9999"
           },
           "will_go": {
@@ -303,7 +474,7 @@
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "Identificador único universal (UUID) gerado automaticamente no banco de dados.",
+            "description": "Identificador único (UUID) autogerado no banco de dados.",
             "example": "d3b07384-d113-4ec5-a587-c50259b67484"
           },
           "name": {
@@ -313,13 +484,178 @@
           },
           "phone_number": {
             "type": "string",
-            "description": "Telefone higienizado com DDI +55 prepended.",
+            "description": "Telefone higienizado com DDI +55.",
             "example": "+5511999999999"
           },
           "will_go": {
             "type": "boolean",
             "description": "Resposta de presença na festa.",
             "example": true
+          }
+        }
+      },
+      "BetQuestionInput": {
+        "type": "object",
+        "required": ["title", "type"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "description": "Título da pergunta do bolão.",
+            "example": "Quem vai comer mais pedaços de pizza?"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["TEXT", "NUMBER", "GUEST_SELECT"],
+            "description": "Tipo de campo que será renderizado no frontend e sua forma de validação.",
+            "example": "GUEST_SELECT"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Lista opcional de strings para múltipla escolha fixa (ex: nomes de países de destino para lua de mel).",
+            "example": ["Grécia", "Itália", "Japão"]
+          }
+        }
+      },
+      "BetQuestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador único (UUID) da pergunta.",
+            "example": "b8f07271-e943-4ac5-8123-c50259b67111"
+          },
+          "title": {
+            "type": "string",
+            "description": "Título da pergunta.",
+            "example": "Quem vai comer mais pedaços de pizza?"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de renderização/validação.",
+            "example": "GUEST_SELECT"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Opções fixas de resposta cadastrada.",
+            "example": []
+          }
+        }
+      },
+      "PlaceBetInput": {
+        "type": "object",
+        "required": ["rsvpId", "questionId", "value"],
+        "properties": {
+          "rsvpId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID do convidado que está realizando a aposta.",
+            "example": "d3b07384-d113-4ec5-a587-c50259b67484"
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID da pergunta em que o convidado está apostando.",
+            "example": "b8f07271-e943-4ac5-8123-c50259b67111"
+          },
+          "value": {
+            "type": "string",
+            "description": "Palpite da aposta. Se a pergunta for GUEST_SELECT, deve ser o UUID de um convidado confirmado. Se for NUMBER, deve ser numérico.",
+            "example": "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
+          }
+        }
+      },
+      "GuestBet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID da aposta.",
+            "example": "ffb07384-c113-4ec5-b587-c50259b67444"
+          },
+          "rsvpId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID do convidado que apostou.",
+            "example": "d3b07384-d113-4ec5-a587-c50259b67484"
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID da pergunta correspondente.",
+            "example": "b8f07271-e943-4ac5-8123-c50259b67111"
+          },
+          "value": {
+            "type": "string",
+            "description": "A resposta salva.",
+            "example": "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
+          }
+        }
+      },
+      "QuestionWithOdds": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID da pergunta.",
+            "example": "b8f07271-e943-4ac5-8123-c50259b67111"
+          },
+          "title": {
+            "type": "string",
+            "description": "Título da pergunta.",
+            "example": "Quem vai comer mais pedaços de pizza?"
+          },
+          "type": {
+            "type": "string",
+            "description": "Tipo de pergunta.",
+            "example": "GUEST_SELECT"
+          },
+          "totalVotes": {
+            "type": "integer",
+            "description": "Quantidade total de convidados que responderam à pergunta.",
+            "example": 100
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OptionWithOdd"
+            },
+            "description": "Lista de opções da pergunta acompanhadas de seus votos e odds calculadas em tempo real."
+          }
+        }
+      },
+      "OptionWithOdd": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "description": "ID/valor correspondente à opção (ex: UUID do candidato ou texto).",
+            "example": "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
+          },
+          "label": {
+            "type": "string",
+            "description": "Rótulo legível para visualização no front-end (ex: Nome do candidato ou o próprio texto).",
+            "example": "Thiago"
+          },
+          "votes": {
+            "type": "integer",
+            "description": "Quantidade de convidados que escolheram esta opção.",
+            "example": 50
+          },
+          "odd": {
+            "type": "number",
+            "format": "float",
+            "description": "Multiplicador dinâmico calculado com base no totalizador de apostas.",
+            "example": 2.0
           }
         }
       },
@@ -341,8 +677,8 @@
             },
             "description": "Lista de mensagens detalhadas de validação (retornado com código HTTP 400).",
             "example": [
-              "O campo 'name' deve ter pelo menos 2 caracteres.",
-              "O campo 'will_go' deve ser um valor booleano (true ou false)."
+              "O campo 'title' é obrigatório.",
+              "Apenas convidados que confirmaram presença podem participar do bolão."
             ]
           },
           "error": {
