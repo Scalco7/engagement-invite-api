@@ -116,3 +116,24 @@ Lista as perguntas do bolão calculando em tempo real os multiplicadores (odds) 
       ]
     }
     ```
+
+### 3.4 GET `/api/bets/rsvp/:rsvpId`
+Retorna todos os palpites (apostas) cadastrados por um convidado específico.
+*   **Regras de Validação:**
+    *   O convidado (`rsvpId`) deve existir no banco de dados. Caso contrário, retorna erro `404`.
+*   **Response de Sucesso (JSON):**
+    ```json
+    {
+      "status": "success",
+      "count": 2,
+      "data": [
+        {
+          "id": "uuid-do-palpite",
+          "rsvpId": "uuid-do-convidado",
+          "questionId": "uuid-da-pergunta",
+          "value": "valor-do-palpite"
+        }
+      ]
+    }
+    ```
+

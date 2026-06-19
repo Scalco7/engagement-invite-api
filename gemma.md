@@ -227,6 +227,8 @@ Abaixo estão listadas as rotas montadas sob o prefixo `/api` agrupadas por suas
     *   **Regras Estritas:** O convidado deve ter confirmado presença (`will_go: true`). Apenas um palpite é permitido por pergunta. Valida tipos específicos de respostas (`NUMBER` deve ser numérico, `GUEST_SELECT` deve ser um ID de convidado confirmado válido).
 *   **`GET /api/bets/questions`**
     *   **Descrição:** Retorna as perguntas cadastradas listando as alternativas e suas cotações (**odds**) calculadas em tempo real sob o modelo de mercado dinâmico totalizador. *(Consulte detalhes de cálculo em [bet.md](file:///d:/felipe/Develop/julia/engagement-invite-api/bet.md))*.
+*   **`GET /api/bets/rsvp/:rsvpId`**
+    *   **Descrição:** Retorna todas as apostas (palpites) registradas por um convidado específico. Retorna 404 se o convidado não for encontrado.
 
 ### 8.3 Categoria: Infraestrutura e Status
 
@@ -238,6 +240,14 @@ Abaixo estão listadas as rotas montadas sob o prefixo `/api` agrupadas por suas
 ---
 
 ## 📝 9. Histórico de Alterações (Changelog)
+
+### [19/06/2026] - Criação da Rota de Busca de Apostas por Convidado (RSVP ID)
+*   **HTTP, Rotas e Serviços**:
+    *   Criada a rota `GET /api/bets/rsvp/:rsvpId` para listar todas as apostas realizadas por um determinado convidado.
+    *   Implementado o método `getBetsByRsvpId` em `BetService` e `getBetsByRsvp` em `BetController`.
+    *   Adicionada validação de existência do RSVP (retorna erro 404 se não encontrado).
+*   **Documentação**:
+    *   Atualizada a especificação do `swagger.json` e a documentação dos endpoints em `gemma.md`.
 
 ### [18/06/2026] - Adição de E-mail, Unicidade e Rota de Lookup
 *   **Banco de Dados (Prisma)**:

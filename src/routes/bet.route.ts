@@ -10,4 +10,7 @@ router.get('/questions', BetController.listQuestions);
 // Route to place a bet
 router.post('/place', BetController.placeBet);
 
+// Route to get all bets for a specific guest
+router.get('/rsvp/:rsvpId', BetController.getBetsByRsvp);
+
 export default router;

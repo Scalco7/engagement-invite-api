@@ -180,4 +180,23 @@ export class BetService {
       };
     });
   }
+
+  /**
+   * Retrieves all bets placed by a specific guest.
+   */
+  static async getBetsByRsvpId(rsvpId: string) {
+    // 1. Validate RSVP existence
+    const rsvp = await prisma.rsvp.findUnique({
+      where: { id: rsvpId },
+    });
+
+    if (!rsvp) {
+      throw new Error('Convidado não encontrado.');
+    }
+
+    // 2. Fetch and return guest bets
+    return prisma.guestBet.findMany({
+      where: { rsvpId },
+    });
+  }
 }
