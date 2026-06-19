@@ -76,6 +76,12 @@ Buscando a separação clara de responsabilidade e melhoria da legibilidade do c
 3.  **Serviços (`services/`)**: Responsáveis únicos pela lógica de negócio e queries persistentes com o banco de dados (Prisma). Eles não conhecem objetos do Express (como `req` ou `res`).
 4.  **Utilitários (`utils/`)**: Funções auxiliares agnósticas reutilizadas entre as demais camadas (ex: higienização e formatação de números).
 
+### 🗄️ 2.6 Estratégia Híbrida de Acesso a Dados (SQL Puro vs. ORM)
+Para otimizar a performance de leitura sem comprometer a facilidade de escrita e validação de dados, o projeto adota uma abordagem híbrida na camada de serviço (`services/`):
+*   **Consultas de Leitura (SELECTs)**: Devem ser estruturadas exclusivamente em **SQL puro** utilizando a API `prisma.$queryRaw` do Prisma. Isso evita o overhead do ORM e dá controle total sobre as cotações, ordenações e agrupamentos.
+    *   *Segurança*: A interpolação de variáveis em `prisma.$queryRaw` (tagged templates) é convertida automaticamente pelo Prisma em placeholders parametrizados seguros (evitando injeção de SQL).
+*   **Escritas (INSERTs/UPDATEs/DELETEs)**: São mantidas usando a API clássica do **Prisma ORM** (ex: `prisma.rsvp.create`), aproveitando as facilidades de mapeamento de objetos e validações automáticas do client gerado.
+
 ---
 
 ## 📂 3. Explicação Arquivo por Arquivo (File-by-File)
@@ -241,13 +247,15 @@ Abaixo estão listadas as rotas montadas sob o prefixo `/api` agrupadas por suas
 
 ## 📝 9. Histórico de Alterações (Changelog)
 
-### [19/06/2026] - Criação da Rota de Busca de Apostas por Convidado (RSVP ID)
+### [19/06/2026] - Criação de Endpoint e Migração de Leituras para SQL Puro
 *   **HTTP, Rotas e Serviços**:
     *   Criada a rota `GET /api/bets/rsvp/:rsvpId` para listar todas as apostas realizadas por um determinado convidado.
     *   Implementado o método `getBetsByRsvpId` em `BetService` e `getBetsByRsvp` em `BetController`.
     *   Adicionada validação de existência do RSVP (retorna erro 404 se não encontrado).
+    *   Migradas **todas as consultas de leitura (SELECTs)** nas camadas de serviço para usar SQL puro (`prisma.$queryRaw`), mantendo escritas (INSERTs/UPDATEs) via ORM.
 *   **Documentação**:
-    *   Atualizada a especificação do `swagger.json` e a documentação dos endpoints em `gemma.md`.
+    *   Atualizada a especificação do `swagger.json` e as referências em `gemma.md` e `bet.md`.
+    *   Adicionada a seção **2.6 Estratégia Híbrida de Acesso a Dados (SQL Puro vs. ORM)** na documentação oficial `gemma.md`.
 
 ### [18/06/2026] - Adição de E-mail, Unicidade e Rota de Lookup
 *   **Banco de Dados (Prisma)**:
