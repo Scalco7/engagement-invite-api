@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { RsvpService } from "../services/rsvp.service";
 import { sanitizeAndFormatPhone } from "../utils/phone";
+import { EmailService } from "../services/email.service";
 
 // Email validation helper
 const isValidEmail = (email: string): boolean => {
@@ -90,6 +91,21 @@ export class RsvpController {
         phone_number: formattedPhone,
         will_go,
       });
+
+      // Send email notification in a fault-tolerant way
+      try {
+        await EmailService.sendRsvpNotification({
+          name: newRsvp.name,
+          email: newRsvp.email,
+          phone_number: newRsvp.phone_number,
+          will_go: newRsvp.will_go,
+        });
+      } catch (emailError: any) {
+        console.error(
+          "[RSVP CONTROLLER] Falha silenciosa ao enviar notificação de e-mail:",
+          emailError.message,
+        );
+      }
 
       res.status(201).json({
         status: "success",

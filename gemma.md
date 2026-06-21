@@ -29,7 +29,8 @@ O projeto adota uma arquitetura de camadas limpa (MVC adaptada), onde cada diret
 │   │   └── bet.route.ts  # Roteador específico do Bolão
 │   ├── services/         # Camada de Negócio: manipula DB e lógica
 │   │   ├── rsvp.service.ts
-│   │   └── bet.service.ts # Serviços de consultas e cálculo de odds
+│   │   ├── bet.service.ts # Serviços de consultas e cálculo de odds
+│   │   └── email.service.ts # Serviço de envio de notificações por e-mail
 │   └── utils/            # Utilitários compartilhados reutilizáveis
 │       └── phone.ts      # Higienização e prefixação de telefone (+55)
 ├── swagger.json          # Especificação OpenAPI 3.0 do projeto
@@ -101,6 +102,7 @@ Abaixo está o detalhamento de cada arquivo do projeto e sua finalidade:
 *   **[`src/utils/phone.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/utils/phone.ts)**: Utilitário para formatar telefones com prefixo brasileiro (+55).
 *   **[`src/services/rsvp.service.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/services/rsvp.service.ts)**: Persistência e busca de registros de presença de convidados no banco de dados.
 *   **[`src/services/bet.service.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/services/bet.service.ts)**: Métodos de negócio do bolão (registro de apostas e geração/cálculo de odds dinâmicas).
+*   **[`src/services/email.service.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/services/email.service.ts)**: Serviço de envio de notificações de e-mail (respostas de RSVP).
 *   **[`src/controllers/rsvp.controller.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/controllers/rsvp.controller.ts)**: Orquestra o recebimento, validação e resposta HTTP dos RSVPs.
 *   **[`src/controllers/bet.controller.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/controllers/bet.controller.ts)**: Valida dados de cadastro de perguntas, valida apostas e manipula retornos HTTP dos endpoints do bolão.
 *   **[`src/routes/rsvp.route.ts`](file:///d:/felipe/Develop/julia/engagement-invite-api/src/routes/rsvp.route.ts)**: Conecta os verbos HTTP de RSVP ao RsvpController.
@@ -118,6 +120,13 @@ A aplicação utiliza as seguintes chaves de ambiente:
 | `DATABASE_URL` | **Sim** | String de conexão completa com o Neon Postgres. | `postgresql://user:pass@ep-cool-fog-1234.us-east-2.aws.neon.tech/neondb?sslmode=require` |
 | `PORT` | Não | Porta onde o servidor Express local irá escutar (Local apenas). | `3000` |
 | `NODE_ENV` | Não | Indica se o ambiente está em `development` ou `production`. | `development` |
+| `SMTP_HOST` | Não | Servidor SMTP para o envio de e-mails. | `smtp.gmail.com` |
+| `SMTP_PORT` | Não | Porta do servidor SMTP. | `587` |
+| `SMTP_SECURE` | Não | Se `true` usa SSL na porta 465. Se `false` usa STARTTLS na porta 587. | `false` |
+| `SMTP_USER` | Não | Usuário/E-mail de autenticação SMTP. Ativa modo Mock se vazio. | `fscalco7@gmail.com` |
+| `SMTP_PASS` | Não | Senha de autenticação SMTP (Senha de aplicativo do Google). | `abcd efgh ijkl mnop` |
+| `SMTP_FROM` | Não | E-mail do remetente das notificações de RSVP. | `no-reply@invite-noivado.com` |
+| `SMTP_TO` | Não | E-mail destinatário para as notificações (padrão: fscalco7@gmail.com). | `fscalco7@gmail.com` |
 
 ---
 
@@ -238,6 +247,15 @@ Abaixo estão listadas as rotas montadas sob o prefixo `/api` agrupadas por suas
 ---
 
 ## 📝 9. Histórico de Alterações (Changelog)
+
+### [21/06/2026] - Implementação de Notificação de RSVP por E-mail
+*   **Novo Serviço**:
+    *   Desenvolvida a [EmailService](file:///d:/felipe/Develop/julia/engagement-invite-api/src/services/email.service.ts) encapsulando o `nodemailer`.
+    *   Suporte a envio real por SMTP (Gmail ou outros provedores) e fallback para console logger (modo Mock) se credenciais não forem providas.
+*   **Integração no RsvpController**:
+    *   Integrado o envio de e-mail ao método `create` do [RsvpController](file:///d:/felipe/Develop/julia/engagement-invite-api/src/controllers/rsvp.controller.ts) em um bloco `try-catch` isolado (resiliência a falhas do serviço de correio).
+*   **Variáveis de Ambiente**:
+    *   Adicionadas variáveis de SMTP no arquivo `.env`.
 
 ### [18/06/2026] - Adição de E-mail, Unicidade e Rota de Lookup
 *   **Banco de Dados (Prisma)**:
