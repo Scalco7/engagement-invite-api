@@ -153,4 +153,41 @@ export class BetController {
       });
     }
   }
+
+  /**
+   * Handles GET /bets/rsvp/:rsvpId - Lists all bets for a specific guest.
+   */
+  static async getBetsByRsvp(req: Request, res: Response): Promise<void> {
+    try {
+      const { rsvpId } = req.params;
+
+      if (!rsvpId) {
+        res.status(400).json({
+          status: 'error',
+          message: "O parâmetro 'rsvpId' é obrigatório.",
+        });
+        return;
+      }
+
+      const bets = await BetService.getBetsByRsvpId(rsvpId);
+
+      res.json({
+        status: 'success',
+        count: bets.length,
+        data: bets,
+      });
+    } catch (error: any) {
+      const isNotFound = error.message.includes('não encontrado');
+      const statusCode = isNotFound ? 404 : 500;
+      const message = isNotFound 
+        ? 'Convidado não encontrado.' 
+        : 'Erro interno ao consultar as apostas do convidado no banco de dados.';
+
+      res.status(statusCode).json({
+        status: 'error',
+        message,
+        error: error.message,
+      });
+    }
+  }
 }

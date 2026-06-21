@@ -32,9 +32,10 @@ export class BetService {
    */
   static async placeBet(data: PlaceBetInput) {
     // 1. Validate RSVP existence and confirmation
-    const rsvp = await prisma.rsvp.findUnique({
-      where: { id: data.rsvpId },
-    });
+    const rsvps = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "Rsvp" WHERE id = ${data.rsvpId} LIMIT 1
+    `;
+    const rsvp = rsvps[0] || null;
 
     if (!rsvp) {
       throw new Error('RSVP do convidado não encontrado.');
@@ -44,9 +45,10 @@ export class BetService {
     }
 
     // 2. Validate Question existence
-    const question = await prisma.betQuestion.findUnique({
-      where: { id: data.questionId },
-    });
+    const questions = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "BetQuestion" WHERE id = ${data.questionId} LIMIT 1
+    `;
+    const question = questions[0] || null;
 
     if (!question) {
       throw new Error('Pergunta do bolão não encontrada.');
@@ -55,9 +57,10 @@ export class BetService {
     // 3. Type-specific validations for value
     if (question.type === 'GUEST_SELECT') {
       // Check if value is a valid UUID of a confirmed guest
-      const targetGuest = await prisma.rsvp.findUnique({
-        where: { id: data.value },
-      });
+      const targetGuests = await prisma.$queryRaw<any[]>`
+        SELECT * FROM "Rsvp" WHERE id = ${data.value} LIMIT 1
+      `;
+      const targetGuest = targetGuests[0] || null;
       if (!targetGuest) {
         throw new Error('A opção selecionada deve ser um convidado existente.');
       }
@@ -73,20 +76,16 @@ export class BetService {
     }
 
     // 4. Validate unique constraint (one vote per question)
-    const existingBet = await prisma.guestBet.findUnique({
-      where: {
-        rsvpId_questionId: {
-          rsvpId: data.rsvpId,
-          questionId: data.questionId,
-        },
-      },
-    });
+    const existingBets = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "GuestBet" WHERE "rsvpId" = ${data.rsvpId} AND "questionId" = ${data.questionId} LIMIT 1
+    `;
+    const existingBet = existingBets[0] || null;
 
     if (existingBet) {
       throw new Error('Você já registrou um palpite para esta pergunta.');
     }
 
-    // 5. Persist the bet
+    // 5. Persist the bet using ORM
     return prisma.guestBet.create({
       data: {
         rsvpId: data.rsvpId,
@@ -100,25 +99,30 @@ export class BetService {
    * Lists all questions along with options and their dynamic odds.
    */
   static async listQuestionsWithOdds() {
-    // Fetch all questions and their current bets
-    const questions = await prisma.betQuestion.findMany({
-      include: {
-        bets: true,
-      },
+    // Fetch all questions and their current bets via raw SQL SELECTs
+    const questions = await prisma.$queryRaw<any[]>`SELECT * FROM "BetQuestion"`;
+    const bets = await prisma.$queryRaw<any[]>`SELECT * FROM "GuestBet"`;
+
+    // Fetch all confirmed guests (needed for GUEST_SELECT questions) via raw SQL SELECT
+    const confirmedGuests = await prisma.$queryRaw<any[]>`
+      SELECT id, name FROM "Rsvp" WHERE will_go = true
+    `;
+
+    // Map bets to questions in memory
+    const questionsWithBets = questions.map((q: any) => {
+      const qBets = bets.filter((b: any) => b.questionId === q.id);
+      return {
+        ...q,
+        bets: qBets,
+      };
     });
 
-    // Fetch all confirmed guests (needed for GUEST_SELECT questions)
-    const confirmedGuests = await prisma.rsvp.findMany({
-      where: { will_go: true },
-      select: { id: true, name: true },
-    });
-
-    return questions.map((q) => {
+    return questionsWithBets.map((q: any) => {
       const totalVotes = q.bets.length;
 
       // Group bets by value
       const voteCounts: Record<string, number> = {};
-      q.bets.forEach((bet) => {
+      q.bets.forEach((bet: any) => {
         voteCounts[bet.value] = (voteCounts[bet.value] || 0) + 1;
       });
 
@@ -146,7 +150,7 @@ export class BetService {
         });
       } else if (q.options && q.options.length > 0) {
         // Options are predefined in the question
-        optionsWithOdds = q.options.map((option) => {
+        optionsWithOdds = q.options.map((option: any) => {
           const votes = voteCounts[option] || 0;
           return {
             value: option,
@@ -179,5 +183,25 @@ export class BetService {
         options: optionsWithOdds,
       };
     });
+  }
+
+  /**
+   * Retrieves all bets placed by a specific guest.
+   */
+  static async getBetsByRsvpId(rsvpId: string) {
+    // 1. Validate RSVP existence
+    const rsvps = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "Rsvp" WHERE id = ${rsvpId} LIMIT 1
+    `;
+    const rsvp = rsvps[0] || null;
+
+    if (!rsvp) {
+      throw new Error('Convidado não encontrado.');
+    }
+
+    // 2. Fetch and return guest bets
+    return prisma.$queryRaw<any[]>`
+      SELECT * FROM "GuestBet" WHERE "rsvpId" = ${rsvpId}
+    `;
   }
 }

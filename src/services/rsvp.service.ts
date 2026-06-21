@@ -31,7 +31,7 @@ export class RsvpService {
    * @returns List of all RSVP records
    */
   static async getAllRsvps() {
-    return prisma.rsvp.findMany();
+    return prisma.$queryRaw<any[]>`SELECT * FROM "Rsvp"`;
   }
 
   /**
@@ -42,14 +42,11 @@ export class RsvpService {
    * @returns The RSVP record if found, otherwise null
    */
   static async findRsvpByEmailAndPhone(email: string, phoneNumber: string) {
-    return prisma.rsvp.findFirst({
-      where: {
-        email: {
-          equals: email,
-          mode: 'insensitive',
-        },
-        phone_number: phoneNumber,
-      },
-    });
+    const rsvps = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "Rsvp"
+      WHERE LOWER(email) = LOWER(${email}) AND phone_number = ${phoneNumber}
+      LIMIT 1
+    `;
+    return rsvps[0] || null;
   }
 }

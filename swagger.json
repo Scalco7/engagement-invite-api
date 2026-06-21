@@ -523,6 +523,83 @@
           }
         }
       }
+    },
+    "/api/bets/rsvp/{rsvpId}": {
+      "get": {
+        "tags": ["Bolão"],
+        "summary": "Retorna todas as apostas de certo convidado",
+        "description": "Retorna todas as apostas (palpites) que um convidado específico cadastrou no bolão. Retorna erro 404 caso o convidado não seja encontrado.",
+        "parameters": [
+          {
+            "name": "rsvpId",
+            "in": "path",
+            "required": true,
+            "description": "UUID do convidado.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de apostas do convidado retornada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 2
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GuestBet"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requisição inválida ou parâmetros incorretos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Convidado não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno do servidor ao ler do banco",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
